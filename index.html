@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hero Quest: Tiniest - Skill Shop Update</title>
+    <title>Hero Quest: Tiniest - FINAL BOSS</title>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
     
     <style>
@@ -41,7 +41,16 @@
             animation: bounceSlow 2s infinite ease-in-out; 
             overflow: visible; 
         }
+        
+        /* Animasi Boss lebih sangar */
+        .boss-svg {
+            max-height: 30dvh !important;
+            filter: drop-shadow(0 0 10px red);
+            animation: shake 0.5s infinite;
+        }
+
         @keyframes bounceSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, 1px); } }
         
         #modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; width: 85%; border-radius: 25px; padding: 20px; border: 5px solid var(--biru); text-align: center; }
@@ -99,6 +108,7 @@
         <h1 style="margin:10px 0; text-align:center;">HERO QUEST<br><span style="color:var(--pink); font-size:36px;">TINIEST</span></h1>
         <div id="home-preview" style="width:120px; margin: 10px 0;"></div>
         <button class="btn-main" onclick="goSelect()" style="width: 200px; font-size: 18px;">MULAI PETUALANGAN</button>
+        <button id="reset-btn" onclick="resetGame()" style="margin-top:20px; font-size:8px; opacity:0.5; border:none; background:none;">RESET DATA</button>
     </div>
 
     <div id="screen-select" class="screen" style="padding:10px; overflow-y:auto;">
@@ -118,16 +128,14 @@
             <div id="shop-hero-view" style="text-align:center; width:120px;"></div>
             <button class="shop-nav-btn" onclick="navShop(1)">&gt;</button>
         </div>
-        
         <div class="shop-section-title">AKSESORI</div>
         <div id="shop-acc-content" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 10px;"></div>
-        
         <div class="shop-section-title">SKILL PERMANEN (STATS)</div>
         <div id="shop-skill-content" style="display:flex; flex-direction:column; gap:8px; padding:0 10px 20px 10px;"></div>
     </div>
 
     <div id="screen-battle" class="screen">
-        <div id="bot-team" style="display:flex; justify-content: space-around; padding:5px;"></div>
+        <div id="bot-team" style="display:flex; justify-content: space-around; padding:5px; align-items:flex-end; min-height:160px;"></div>
         <div id="battle-center-panel">
             <div id="battle-status" style="font-size: 14px; color: var(--pink); font-weight:bold;">Siap?</div>
             <div id="battle-log-text" style="font-size: 11px; color: #666;">Klik heromu untuk menyerang!</div>
@@ -138,9 +146,10 @@
         </div>
     </div>
 
-    <div id="screen-result" class="screen" style="justify-content:center; align-items:center;">
-        <h1 id="res-txt"></h1>
-        <button class="btn-main" onclick="goHome()" style="width:180px;">LANJUT</button>
+    <div id="screen-result" class="screen" style="justify-content:center; align-items:center; text-align:center; padding:20px;">
+        <h1 id="res-txt" style="font-size:40px;"></h1>
+        <p id="res-subtxt" style="margin-bottom:20px;"></p>
+        <button id="res-btn" class="btn-main" onclick="goHome()" style="width:180px;">LANJUT</button>
     </div>
 </div>
 
@@ -158,39 +167,39 @@
     let coins = parseInt(localStorage.getItem('coins')) || 0;
     let heroAccs = JSON.parse(localStorage.getItem('heroAccs')) || {};
     let heroLevels = JSON.parse(localStorage.getItem('heroLevels')) || {};
-    
-    // Inisialisasi stats jika belum ada
-    charData.forEach(c => { 
-        if(!heroLevels[c.id]) {
-            heroLevels[c.id] = { lvl:1, maxHP:1000, baseDmg:0, bonusDef:0, skillAmp:0 };
-        } 
-    });
-
     let pTopLvl = parseInt(localStorage.getItem('pTopLvl')) || 1;
     let myTeam = [], botTeam = [], selP = null, selB = null, shopIdx = 0;
 
-    const getHeroSVG = (type, hasPita=false, hasTopi=false) => {
+    charData.forEach(c => { if(!heroLevels[c.id]) heroLevels[c.id] = { lvl:1, maxHP:1000, baseDmg:0, bonusDef:0, skillAmp:0 }; });
+
+    const getHeroSVG = (type, hasPita=false, hasTopi=false, isBoss=false) => {
         const [px, py, tx, ty] = accCoords[type] || [35,30,35,20];
-        let accs = `
+        let accs = isBoss ? `
+            <g transform="translate(20,5) scale(1.5)">
+                <path d="M10 20 L25 5 L40 20" stroke="red" stroke-width="4" fill="none" />
+                <circle cx="25" cy="15" r="5" fill="red" />
+            </g>` : `
             <g style="display:${hasPita?'block':'none'}" transform="translate(${px},${py}) scale(0.6) translate(-10,-5)"><circle cx="0" cy="0" r="12" fill="#FF80AB"/><circle cx="20" cy="0" r="12" fill="#FF80AB"/><rect x="7" y="-3" width="6" height="6" fill="#F50057"/></g>
             <g style="display:${hasTopi?'block':'none'}" transform="translate(${tx},${ty}) scale(0.7) translate(-20,-15)"><rect x="0" y="5" width="40" height="12" fill="#1565C0"/><rect x="-5" y="15" width="50" height="4" fill="#0D47A1"/></g>`;
         
         const bodies = {
             pudu: `<circle cx="32" cy="32" r="11" fill="#8D6E63"/><circle cx="32" cy="32" r="6" fill="#D7CCC8"/><circle cx="68" cy="32" r="11" fill="#8D6E63"/><circle cx="68" cy="32" r="6" fill="#D7CCC8"/><rect x="30" y="55" width="40" height="35" rx="17" fill="#A1887F"/><circle cx="50" cy="50" r="27" fill="#A1887F"/><ellipse cx="50" cy="57" rx="11" ry="9" fill="#F5F5F5"/><circle cx="40" cy="47" r="2.5" fill="#212121"/><circle cx="60" cy="47" r="2.5" fill="#212121"/><path d="M47 55 Q50 52 53 55 L50 57 Z" fill="#3E2723"/><circle cx="30" cy="70" r="6" fill="#8D6E63"/><circle cx="70" cy="70" r="6" fill="#8D6E63"/>`,
+            boss: `<circle cx="32" cy="32" r="15" fill="#212121"/><circle cx="68" cy="32" r="15" fill="#212121"/><circle cx="50" cy="50" r="40" fill="#1a1a1a"/><path d="M30 40 L45 50 M70 40 L55 50" stroke="red" stroke-width="4"/><circle cx="40" cy="55" r="4" fill="red"/><circle cx="60" cy="55" r="4" fill="red"/><path d="M35 75 Q50 85 65 75" stroke="red" stroke-width="3" fill="none"/>`,
             choco: `<circle cx="37.5" cy="42.5" r="8" fill="#5D4037"/><circle cx="62.5" cy="42.5" r="8" fill="#5D4037"/><rect x="35" y="62.5" width="30" height="25" rx="12.5" fill="#6D4C41"/><circle cx="50" cy="57.5" r="21" fill="#6D4C41"/><ellipse cx="50" cy="62.5" rx="9" ry="7" fill="#D7CCC8"/><circle cx="42.5" cy="56" r="2.2" fill="#212121"/><circle cx="57.5" cy="56" r="2.2" fill="#212121"/><circle cx="36" cy="72.5" r="4.5" fill="#5D4037"/><circle cx="64" cy="72.5" r="4.5" fill="#5D4037"/>`,
             puding: `<path d="M22 50 C22 20, 77 20, 77 50 C77 65, 67 75, 50 75 C32 75, 22 65, 22 50 Z" fill="#B39DDB"/><circle cx="42" cy="52" r="2.5" fill="#212121"/><circle cx="57" cy="52" r="2.5" fill="#212121"/><circle cx="27" cy="77" r="7" fill="#B39DDB"/><circle cx="42" cy="82" r="7" fill="#B39DDB"/><circle cx="58" cy="82" r="7" fill="#B39DDB"/><circle cx="72" cy="77" r="7" fill="#B39DDB"/>`,
             jelly: `<path d="M25 55 Q25 20 50 20 Q75 20 75 55 Q75 65 50 65 Q25 65 25 55" fill="#B3E5FC"/><path d="M30 65 Q25 75 28 85" stroke="#4FC3F7" stroke-width="3" fill="none"/><path d="M42 65 Q40 78 42 88" stroke="#4FC3F7" stroke-width="3" fill="none"/><path d="M58 65 Q60 78 58 88" stroke="#4FC3F7" stroke-width="3" fill="none"/><path d="M70 65 Q75 75 72 85" stroke="#4FC3F7" stroke-width="3" fill="none"/><circle cx="42" cy="47" r="2.5" fill="#212121"/><circle cx="57" cy="47" r="2.5" fill="#212121"/>`,
             rei: `<path d="M20 60 Q20 20 50 20 Q80 20 80 60 Z" fill="#66BB6A"/><circle cx="50" cy="62" r="22" fill="#A5D6A7"/><circle cx="42" cy="60" r="2.5" fill="#212121"/><circle cx="57" cy="60" r="2.5" fill="#212121"/><circle cx="30" cy="77" r="9" fill="#A5D6A7"/><circle cx="70" cy="77" r="9" fill="#A5D6A7"/>`,
             candy: `<path d="M22 70 Q20 80 30 82 L70 82 Q80 80 77 70 L72 57 L27 57 Z" fill="#FF9800"/><path d="M27 57 L72 57 L65 37 L35 37 Z" fill="#FFEB3B"/><path d="M35 37 L65 37 L55 20 Q50 15 45 20 Z" fill="#FFFFFF"/><circle cx="42" cy="57" r="2.5" fill="#212121"/><circle cx="57" cy="57" r="2.5" fill="#212121"/>`
         };
-        return `<svg viewBox="0 0 100 100" class="char-svg"><ellipse cx="50" cy="92" rx="25" ry="5" fill="#000" opacity="0.1" />${bodies[type] || bodies.pudu}${accs}</svg>`;
+        return `<svg viewBox="0 0 100 100" class="char-svg ${isBoss?'boss-svg':''}"><ellipse cx="50" cy="92" rx="25" ry="5" fill="#000" opacity="0.1" />${bodies[type] || bodies.pudu}${accs}</svg>`;
     };
 
     function updateUI() { document.getElementById('coin-val').innerText = coins; document.getElementById('top-lvl').innerText = pTopLvl; }
     function saveName() { localStorage.setItem('userName', document.getElementById('name-input').value); }
     function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-    function goHome() { showScreen('screen-home'); updateHomePreview(); }
+    function goHome() { if(pTopLvl > 10) pTopLvl = 10; showScreen('screen-home'); updateHomePreview(); updateUI(); }
     function updateHomePreview() { document.getElementById('home-preview').innerHTML = getHeroSVG('pudu', heroAccs.pudu?.pita, heroAccs.pudu?.topi); }
+    function resetGame() { if(confirm("Reset semua progress?")){ localStorage.clear(); location.reload(); } }
 
     function openModal(heroId) {
         const hero = charData.find(h => h.id === heroId);
@@ -200,18 +209,13 @@
             <h2 style="margin:5px 0;">${hero.name}</h2>
             <div style="background:#f0f8ff; border-radius:15px; padding:10px; text-align:left; font-size:11px;">
                 <p>❤️ <b>HP:</b> ${stats.maxHP} | ⚔️ <b>Atk:</b> +${stats.baseDmg}</p>
-                <p>🛡️ <b>Def:</b> ${hero.def + (stats.bonusDef || 0)} | ⚡ <b>Skill Amp:</b> +${stats.skillAmp || 0}</p>
+                <p>🛡️ <b>Def:</b> ${hero.def + (stats.bonusDef || 0)}</p>
+                <p>⚡ <b>Skill Amp:</b> +${stats.skillAmp || 0}</p>
                 <hr>
                 <p><b>Daftar Skill:</b></p>
-                ${hero.skills.map(s => `
-                    <div style="margin-bottom:5px;">
-                        <b>${s.n}</b>: ${s.d < 0 ? 'Heal '+Math.abs(s.d) : 'Base Dmg '+s.d}
-                    </div>
-                `).join('')}
+                ${hero.skills.map(s => `<div style="margin-bottom:5px;"><b>${s.n}</b>: ${s.d < 0 ? 'Heal '+Math.abs(s.d) : 'Base Dmg '+s.d}</div>`).join('')}
             </div>
-            <button class="btn-main" style="margin-top:10px; width:100%" onclick="togglePick('${heroId}')">
-                ${myTeam.find(x => x.id === heroId) ? 'HAPUS DARI TIM' : 'MASUKKAN TIM'}
-            </button>`;
+            <button class="btn-main" style="margin-top:10px; width:100%" onclick="togglePick('${heroId}')">${myTeam.find(x => x.id === heroId) ? 'HAPUS' : 'PILIH'}</button>`;
         document.getElementById('modal-overlay').style.display = 'flex';
     }
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
@@ -221,20 +225,11 @@
         const stats = heroLevels[heroId];
         const idx = myTeam.findIndex(x => x.id === heroId);
         if (idx > -1) myTeam.splice(idx, 1);
-        else if (myTeam.length < 3) {
-            myTeam.push({
-                ...hero, 
-                curHP: stats.maxHP, 
-                maxHP: stats.maxHP, 
-                baseDmg: stats.baseDmg,
-                bonusDef: stats.bonusDef || 0,
-                skillAmp: stats.skillAmp || 0
-            });
-        }
+        else if (myTeam.length < 3) myTeam.push({ ...hero, curHP: stats.maxHP, maxHP: stats.maxHP, baseDmg: stats.baseDmg, bonusDef: stats.bonusDef || 0, skillAmp: stats.skillAmp || 0 });
         renderSelectGrid(); closeModal();
     }
 
-    function goSelect() { showScreen('screen-select'); renderSelectGrid(); }
+    function goSelect() { if(pTopLvl > 10) return alert("Petualangan Selesai! Kamu sudah mengalahkan Raja!"); showScreen('screen-select'); renderSelectGrid(); }
     function renderSelectGrid() {
         const grid = document.getElementById('select-grid'); grid.innerHTML = '';
         charData.forEach(c => {
@@ -250,112 +245,59 @@
 
     function goShop() { showScreen('screen-shop'); updateShopHero(); }
     function navShop(dir) { shopIdx = (shopIdx + dir + charData.length) % charData.length; updateShopHero(); }
-    
     function updateShopHero() {
-        const h = charData[shopIdx];
-        const stats = heroLevels[h.id];
-        document.getElementById('shop-hero-view').innerHTML = `<div style="font-size:14px; color:var(--cokelat)">Hero: <b>${h.name}</b></div>` + getHeroSVG(h.type, heroAccs[h.id]?.pita, heroAccs[h.id]?.topi);
-        
-        // Aksesori
-        const accContent = document.getElementById('shop-acc-content');
-        accContent.innerHTML = `
-            <button class="btn-main" onclick="buyAcc('${h.id}', 'pita', 50)">🎀 PITA (50)</button>
-            <button class="btn-main" onclick="buyAcc('${h.id}', 'topi', 100)">🎩 TOPI (100)</button>
-        `;
-
-        // Skills & Stats
-        const skillContent = document.getElementById('shop-skill-content');
-        skillContent.innerHTML = `
-            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'baseDmg', 150, 20)">
-                <span>💪</span> <div><b>Kekuatan (150)</b><br><small>Dmg +20 (Total: +${stats.baseDmg})</small></div>
-            </button>
-            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'bonusDef', 150, 5)">
-                <span>🛡️</span> <div><b>Pertahanan (150)</b><br><small>Def +5 (Total: +${stats.bonusDef})</small></div>
-            </button>
-            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'maxHP', 200, 150)">
-                <span>👟</span> <div><b>Tendangan HP (200)</b><br><small>HP +150 (Total: ${stats.maxHP})</small></div>
-            </button>
-            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'skillAmp', 250, 30)">
-                <span>⚡</span> <div><b>Petir Skill (250)</b><br><small>Skill Dmg +30 (Total: +${stats.skillAmp})</small></div>
-            </button>
-            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'baseDmg', 400, 60)">
-                <span>🌙</span> <div><b>Pedang Sabit (400)</b><br><small>Dmg +60 (Total: +${stats.baseDmg})</small></div>
-            </button>
-        `;
+        const h = charData[shopIdx]; const stats = heroLevels[h.id];
+        document.getElementById('shop-hero-view').innerHTML = `<div style="font-size:14px;"><b>${h.name}</b></div>` + getHeroSVG(h.type, heroAccs[h.id]?.pita, heroAccs[h.id]?.topi);
+        document.getElementById('shop-acc-content').innerHTML = `<button class="btn-main" onclick="buyAcc('${h.id}', 'pita', 50)">🎀 PITA (50)</button><button class="btn-main" onclick="buyAcc('${h.id}', 'topi', 100)">🎩 TOPI (100)</button>`;
+        document.getElementById('shop-skill-content').innerHTML = `
+            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'baseDmg', 150, 20)"><span>💪</span> <div><b>Atk +20</b> (150)</div></button>
+            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'bonusDef', 150, 5)"><span>🛡️</span> <div><b>Def +5</b> (150)</div></button>
+            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'maxHP', 200, 150)"><span>❤️</span> <div><b>HP +150</b> (200)</div></button>
+            <button class="btn-main btn-skill" onclick="buyStat('${h.id}', 'skillAmp', 250, 30)"><span>⚡</span> <div><b>Skill +30</b> (250)</div></button>`;
     }
 
-    function buyAcc(hId, type, price) {
-        if (coins >= price) {
-            if(!heroAccs[hId]) heroAccs[hId]={};
-            if(heroAccs[hId][type]) return alert("Sudah punya!");
-            coins -= price; heroAccs[hId][type]=true;
-            saveAndRefreshShop();
-        } else alert("Koin tidak cukup!");
-    }
-
-    function buyStat(hId, statKey, price, val) {
-        if (coins >= price) {
-            coins -= price;
-            heroLevels[hId][statKey] = (heroLevels[hId][statKey] || 0) + val;
-            saveAndRefreshShop();
-        } else alert("Koin tidak cukup!");
-    }
-
-    function saveAndRefreshShop() {
-        localStorage.setItem('coins', coins); 
-        localStorage.setItem('heroAccs', JSON.stringify(heroAccs));
-        localStorage.setItem('heroLevels', JSON.stringify(heroLevels));
-        updateUI(); updateShopHero();
-    }
-
-    function updateBattleLog(title, desc) {
-        document.getElementById('battle-status').innerText = title;
-        document.getElementById('battle-log-text').innerHTML = desc;
-    }
+    function buyAcc(hId, type, price) { if (coins >= price) { if(!heroAccs[hId]) heroAccs[hId]={}; if(heroAccs[hId][type]) return alert("Sudah punya!"); coins -= price; heroAccs[hId][type]=true; saveAndRefreshShop(); } else alert("Koin tidak cukup!"); }
+    function buyStat(hId, statKey, price, val) { if (coins >= price) { coins -= price; heroLevels[hId][statKey] = (heroLevels[hId][statKey] || 0) + val; saveAndRefreshShop(); } else alert("Koin tidak cukup!"); }
+    function saveAndRefreshShop() { localStorage.setItem('coins', coins); localStorage.setItem('heroAccs', JSON.stringify(heroAccs)); localStorage.setItem('heroLevels', JSON.stringify(heroLevels)); updateUI(); updateShopHero(); }
 
     function goBattle() {
         showScreen('screen-battle');
-        botTeam = charData.sort(() => .5 - Math.random()).slice(0, 3).map(c => ({
-            ...c, curHP: 800 + (pTopLvl * 150), maxHP: 800 + (pTopLvl * 150), dmgMod: 80 + (pTopLvl * 25)
-        }));
-        selP = null; selB = null; renderBattle();
+        if (pTopLvl === 10) {
+            botTeam = [{ id:'boss', name: "LORD DARK PUDU", type:"boss", curHP: 10000, maxHP: 10000, dmgMod: 250, def: 50, isBoss: true }];
+        } else {
+            botTeam = charData.sort(() => .5 - Math.random()).slice(0, 3).map(c => ({ ...c, curHP: 800 + (pTopLvl * 150), maxHP: 800 + (pTopLvl * 150), dmgMod: 80 + (pTopLvl * 25) }));
+        }
+        selP = null; selB = null; updateBattleLog(pTopLvl===10?"WARNING!":"Siap?", pTopLvl===10?"BOSS TERAKHIR MUNCUL!":"Serang lawan!"); renderBattle();
     }
 
     function renderBattle() {
         const bD = document.getElementById('bot-team'), pD = document.getElementById('player-team'), sD = document.getElementById('skill-btns');
         bD.innerHTML = ''; pD.innerHTML = ''; sD.innerHTML = '';
-        
         botTeam.forEach((c, i) => {
             const div = document.createElement('div'); div.className = `unit-box ${c.curHP<=0?'dead':''}`;
-            div.innerHTML = `${getHeroSVG(c.type)}<div class="hp-bar"><div class="hp-fill" style="width:${(c.curHP/c.maxHP)*100}%; background:var(--merah)"></div></div>`;
-            if(selB === i) div.style.filter = "drop-shadow(0 0 5px red)";
+            if(c.isBoss) div.style.width = "80%";
+            div.innerHTML = `${getHeroSVG(c.type, false, false, c.isBoss)}<div class="hp-bar"><div class="hp-fill" style="width:${(c.curHP/c.maxHP)*100}%; background:red"></div></div><div style="font-size:9px">${c.name}</div>`;
+            if(selB === i) div.style.filter = "drop-shadow(0 0 10px red) brightness(1.2)";
             div.onclick = () => { if(c.curHP > 0) { selB = i; renderBattle(); } }; bD.appendChild(div);
         });
-
         myTeam.forEach((c, i) => {
             const div = document.createElement('div'); div.className = `unit-box ${c.curHP<=0?'dead':''}`;
-            div.innerHTML = `${getHeroSVG(c.type, heroAccs[c.id]?.pita, heroAccs[c.id]?.topi)}<div class="hp-bar"><div class="hp-fill" style="width:${(c.curHP/c.maxHP)*100}%; background:var(--hijau)"></div></div>`;
+            div.innerHTML = `${getHeroSVG(c.type, heroAccs[c.id]?.pita, heroAccs[c.id]?.topi)}<div class="hp-bar"><div class="hp-fill" style="width:${(c.curHP/c.maxHP)*100}%; background:lime"></div></div>`;
             if(selP === i) div.style.filter = "drop-shadow(0 0 8px var(--pink))";
             div.onclick = () => { if(c.curHP > 0) { selP = i; renderBattle(); } }; pD.appendChild(div);
         });
-
         if(selP !== null && myTeam[selP].curHP > 0) {
             myTeam[selP].skills.forEach(s => {
                 const b = document.createElement('button'); b.className = 'btn-main'; b.innerText = s.n;
                 b.onclick = () => {
-                    if (s.d > 0 && selB === null) return updateBattleLog("Pilih Musuh!", "Klik salah satu musuh di atas!");
-                    
-                    // Logic Hitung Damage + Skill Amp + Base Dmg
-                    let powerBonus = myTeam[selP].baseDmg + (myTeam[selP].skillAmp || 0);
-                    let finalDmg = s.d < 0 ? s.d : Math.max(50, (s.d + powerBonus) - (botTeam[selB].def || 0));
-                    
-                    if(s.d < 0) {
-                        myTeam[selP].curHP = Math.min(myTeam[selP].maxHP, myTeam[selP].curHP + Math.abs(s.d));
-                    } else {
+                    if (s.d > 0 && selB === null) return updateBattleLog("Pilih Musuh!", "Klik lawan di atas!");
+                    let bonus = myTeam[selP].baseDmg + (myTeam[selP].skillAmp || 0);
+                    if(s.d < 0) { myTeam[selP].curHP = Math.min(myTeam[selP].maxHP, myTeam[selP].curHP + Math.abs(s.d)); updateBattleLog(myTeam[selP].name, "Healing!"); }
+                    else { 
+                        let finalDmg = Math.max(50, (s.d + bonus) - (botTeam[selB].def || 0));
                         botTeam[selB].curHP = Math.max(0, botTeam[selB].curHP - finalDmg);
+                        updateBattleLog(myTeam[selP].name, `Gunakan ${s.n}! (-${finalDmg})`);
                     }
-                    
-                    updateBattleLog(myTeam[selP].name, `Menggunakan ${s.n}!`);
                     renderBattle();
                     setTimeout(() => { if (botTeam.every(x => x.curHP <= 0)) endBattle(true); else botTurn(); }, 600);
                 }; sD.appendChild(b);
@@ -364,15 +306,15 @@
     }
 
     function botTurn() {
+        const aliveBots = botTeam.filter(b => b.curHP > 0);
         const alivePlayers = myTeam.map((h, i) => h.curHP > 0 ? i : -1).filter(i => i !== -1);
-        if(alivePlayers.length > 0) {
+        if(aliveBots.length > 0 && alivePlayers.length > 0) {
+            const attacker = aliveBots[Math.floor(Math.random() * aliveBots.length)];
             const targetIdx = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-            // Musuh serang dikurangi total Defense (Base + Bonus)
             const totalDef = myTeam[targetIdx].def + (myTeam[targetIdx].bonusDef || 0);
-            const finalDmg = Math.max(30, botTeam[0].dmgMod - totalDef);
-            
+            const finalDmg = Math.max(30, attacker.dmgMod - totalDef);
             myTeam[targetIdx].curHP = Math.max(0, myTeam[targetIdx].curHP - finalDmg);
-            updateBattleLog("Lawan", `Menyerang ${myTeam[targetIdx].name}!`);
+            updateBattleLog(attacker.name, `Serang ${myTeam[targetIdx].name}!`);
         }
         renderBattle();
         if(myTeam.every(x => x.curHP <= 0)) setTimeout(() => endBattle(false), 600);
@@ -380,22 +322,28 @@
 
     function endBattle(win) {
         showScreen('screen-result');
+        const resBtn = document.getElementById('res-btn');
         if(win) { 
-            coins += 200 + (pTopLvl * 20); 
-            pTopLvl++; 
-            localStorage.setItem('coins', coins); 
-            localStorage.setItem('pTopLvl', pTopLvl); 
-            document.getElementById('res-txt').innerText = "you win! 🎉"; 
+            if(pTopLvl === 10) {
+                document.getElementById('res-txt').innerText = "THE END 👑"; 
+                document.getElementById('res-subtxt').innerText = "Selamat! Kamu telah mengalahkan Lord Dark Pudu dan menamatkan game ini!";
+                resBtn.innerText = "MAIN LAGI";
+                pTopLvl = 11; 
+            } else {
+                coins += 200 + (pTopLvl * 20); pTopLvl++;
+                document.getElementById('res-txt').innerText = "VICTORY! 🎉"; 
+                document.getElementById('res-subtxt').innerText = "Kamu dapat koin dan lanjut ke stage berikutnya!";
+            }
+            localStorage.setItem('coins', coins); localStorage.setItem('pTopLvl', pTopLvl); 
+        } else { 
+            document.getElementById('res-txt').innerText = "DEFEAT 💀"; 
+            document.getElementById('res-subtxt').innerText = "Tim kamu tumbang. Ayo upgrade stats lagi!";
         }
-        else { document.getElementById('res-txt').innerText = "Defeat... 💀"; }
         updateUI();
     }
 
-    window.onload = () => { 
-        document.getElementById('name-input').value = localStorage.getItem('userName') || ""; 
-        updateUI(); 
-        updateHomePreview(); 
-    };
+    function updateBattleLog(t, d) { document.getElementById('battle-status').innerText = t; document.getElementById('battle-log-text').innerText = d; }
+    window.onload = () => { document.getElementById('name-input').value = localStorage.getItem('userName') || ""; updateUI(); updateHomePreview(); };
 </script>
 </body>
 </html>
